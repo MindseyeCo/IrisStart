@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --accent-color-1: #06b6d4; /* cyan-500 */
+            --accent-color-2: #22d3ee; /* cyan-400 */
+        }
+        .theme-iris {
+            --accent-color-1: #06b6d4;
+            --accent-color-2: #22d3ee;
+        }
+        .theme-sunset {
+            --accent-color-1: #f97316;
+            --accent-color-2: #fbbf24;
+        }
+        .theme-forest {
+            --accent-color-1: #16a34a;
+            --accent-color-2: #4ade80;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            transition: background-image 0.7s ease-in-out;
+            background-color: #111827;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: linear-gradient(to top, rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+            z-index: 1;
+        }
+        .search-container:focus-within {
+            box-shadow: 0 0 0 2px var(--accent-color-1), 0 0 10px var(--accent-color-1);
+        }
+        .modal { display: none; }
+        .modal.is-open { display: flex; }
+        .bookmark-remove-btn {
+            display: none;
+            position: absolute; top: -5px; right: -5px;
+            background-color: #ef4444; border-radius: 9999px;
+            width: 20px; height: 20px; color: white;
+            justify-content: center; align-items: center;
+            font-size: 12px; cursor: pointer; opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .bookmark-remove-btn:hover { opacity: 1; }
+        .bookmark-item:hover .bookmark-remove-btn { display: flex; }
+        .bookmark-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% { filter: drop-shadow(0 0 4px var(--accent-color-1)) drop-shadow(0 0 8px var(--accent-color-2)); }
+            50% { filter: drop-shadow(0 0 10px var(--accent-color-2)) drop-shadow(0 0 20px var(--accent-color-2)); }
+        }
+        @keyframes blink {
+            0%, 95%, 100% { transform: scaleY(1); }
+            97.5% { transform: scaleY(0.1); }
+        }
+        .animated-eye {
+            animation: pulse 4s infinite ease-in-out, blink 6s infinite ease-in-out;
+            transform-origin: center;
+        }
+        .text-shadow-lg {
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.4);
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent-color-1);
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        .bg-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+        .bg-preview.selected {
+            border-color: #60a5fa;
+            transform: scale(1.1);
+        }
+        .animated-fade-in {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .font-lato { font-family: 'Lato', sans-serif; }
+        .font-roboto { font-family: 'Roboto', sans-serif; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 0;
+        }
+        .modal.is-open .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .backdrop-blur-xl {
+            backdrop-filter: blur(40px);
+        }
+
+        #snackbar {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 20px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: visibility 0s, opacity 0.5s linear;
+        }
+        #snackbar.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .bookmark-item.remove-animation {
+            animation: remove-bookmark 0.3s forwards;
+        }
+        .bookmark-item.add-animation {
+            animation: add-bookmark 0.3s forwards;
+        }
+        @keyframes remove-bookmark {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+        }
+        @keyframes add-bookmark {
+            from {
+                opacity: 0;
+                transform: scale(0.5) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .animate-spin-slow {
+            animation: spin 0.8s ease-in-out;
+        }
+        .search-engine-toggle-animation {
+            animation: search-toggle-out 0.2s ease-in-out forwards;
+        }
+        @keyframes search-toggle-out {
+            from {
+                transform: scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+        }
+        @keyframes search-toggle-in {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .bookmark-container-small {
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        }
+        .bookmark-container-medium {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+        .bookmark-container-large {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+
+        /* Responsive grid adjustments for small devices */
+        @media (max-width: 640px) {
+            .bookmark-container-small {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .bookmark-container-medium {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .bookmark-container-large {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        .group-content {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 500px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .group-content.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+        .chevron {
+            transition: transform 0.3s;
+        }
+        .chevron.rotated {
+            transform: rotate(180deg);
+        }
+        .iris-button-glow {
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            0% {
+                box-shadow: 0 0 5px var(--accent-color-1), 0 0 10px var(--accent-color-1), 0 0 15px var(--accent-color-1);
+            }
+            100% {
+                box-shadow: 0 0 10px var(--accent-color-2), 0 0 20px var(--accent-color-2), 0 0 30px var(--accent-color-2);
+            }
+        }
+        .main-content-glass {
+            background-color: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(20px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .countdown-fade {
+            animation: countdown-pulse 0.5s ease-in-out forwards;
+        }
+        @keyframes countdown-pulse {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .pomodoro-button.active {
+            box-shadow: 0 0 5px var(--accent-color-1), 0 0 10px var(--accent-color-1), 0 0 15px var(--accent-color-1);
+        }
+        
+        .compact-layout #greeting,
+        .compact-layout #motivational-message,
+        .compact-layout #time,
+        .compact-layout #timezone {
+            font-size: 1.5rem; /* text-2xl */
+        }
+        .compact-layout #time {
+            font-size: 2.25rem; /* text-4xl */
+        }
+        .compact-layout .top-left {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            text-align: left;
+        }
+        .compact-layout .top-right {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            text-align: right;
+        }
+        .minimal-layout #greeting,
+        .minimal-layout #motivational-message,
+        .minimal-layout #time,
+        .minimal-layout #timezone,
+        .minimal-layout #eye-container,
+        .minimal-layout #quote-container,
+        .minimal-layout #bookmarks-container,
+        .minimal-layout #todo-container,
+        .minimal-layout #pomodoro-container {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4 transition-all duration-500">
+
+    <!-- Top-Right Weather Container -->
+    <div id="weather-container" class="absolute top-5 right-5 text-gray-200 text-shadow-lg text-lg flex flex-col items-end gap-1 z-20">
+        <span id="weather-text" class="cursor-pointer flex items-center gap-2"></span>
+        <span id="weather-unit" class="text-sm"></span>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div class="w-full max-w-4xl flex flex-col items-center justify-center flex-grow z-10 transition-opacity duration-1000 opacity-0" id="main-content-wrapper">
+        <div class="text-center mb-6 py-2">
+            <h2 id="greeting" class="text-3xl md:text-4xl font-medium text-shadow-lg"></h2>
+            <p id="motivational-message" class="text-sm text-gray-300 italic"></p>
+            <h1 id="time" class="text-6xl md:text-8xl font-bold tracking-tight text-shadow-lg cursor-pointer"></h1>
+            <p id="timezone" class="text-gray-400 text-sm mt-1"></p>
+        </div>
+
+        <div class="mb-6" id="eye-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-cyan-400 animated-eye">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        </div>
+
+        <div class="w-full max-w-lg mb-8 z-10">
+            <form id="search-form" action="https://www.google.com/search" method="get" class="relative" target="_blank">
+                <div class="search-container flex items-center bg-gray-800/80 rounded-full transition-all duration-300 backdrop-blur-sm shadow-lg border border-transparent hover:border-blue-400">
+                    <button type="button" id="search-engine-toggle" title="Change Search Engine" class="p-3 ml-1 rounded-full hover:bg-gray-700/60 transition-colors">
+                        <i id="search-engine-icon" class="text-xl"></i>
+                    </button>
+                    <input type="text" name="q" placeholder="Search Google..." autocomplete="off" class="w-full bg-transparent text-white placeholder-gray-400 py-3 px-2 focus:outline-none">
+                </div>
+            </form>
+        </div>
+        
+        <div id="quote-container" class="my-4 text-center max-w-md text-gray-300 italic transition-all duration-500 hidden"></div>
+
+        <div id="bookmarks-container" class="grid gap-4 w-full max-w-3xl z-10"></div>
+        
+        <div id="todo-container" class="mt-8 w-full max-w-md bg-gray-800/80 rounded-xl shadow-lg backdrop-blur-sm p-4 hidden">
+            <h3 class="text-lg font-semibold mb-3 text-center border-b border-gray-700 pb-2" id="todo-title">To-Do List</h3>
+            <ul id="todo-list" class="flex flex-col gap-2"></ul>
+            <form id="add-todo-form" class="flex gap-2 mt-4">
+                <input id="new-todo-input" type="text" placeholder="Add a new task..." class="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button type="submit" class="p-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"><i class="fas fa-plus"></i></button>
+            </form>
+        </div>
+        
+        <div id="pomodoro-container" class="mt-8 w-full max-w-md bg-gray-800/80 rounded-xl shadow-lg backdrop-blur-sm p-4 hidden flex-col items-center">
+            <h3 class="text-lg font-semibold mb-2" id="pomodoro-title">Pomodoro Timer</h3>
+            <p id="pomodoro-status" class="text-gray-400 mb-4 text-center">Work Session</p>
+            <div class="flex items-center justify-center gap-4 text-4xl font-bold mb-4">
+                <span id="pomodoro-minutes">25</span>
+                <span>:</span>
+                <span id="pomodoro-seconds">00</span>
+            </div>
+            <div class="flex gap-4">
+                <button id="pomodoro-start-btn" class="pomodoro-button px-4 py-2 rounded-full bg-green-500 hover:bg-green-600 transition-colors">Start</button>
+                <button id="pomodoro-pause-btn" class="pomodoro-button px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors">Pause</button>
+                <button id="pomodoro-reset-btn" class="pomodoro-button px-4 py-2 rounded-full bg-red-500 hover:bg-red-600 transition-colors">Reset</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Action Buttons -->
+    <div class="floating-buttons-container absolute bottom-5 right-5 z-20 flex flex-col items-center">
+        <button id="settings-btn" title="Settings" class="bg-gray-700/80 hover:bg-gray-600/80 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-transform transform hover:scale-110 backdrop-blur-sm">
+            <i class="fas fa-cog text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Settings Panel Modal -->
+    <div id="settings-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50 p-4">
+        <div class="bg-gray-800/90 backdrop-blur-xl p-6 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col gap-6 modal-content" id="modal-content">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold">Settings</h2>
+                <button class="modal-close-btn text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            
+            <!-- General Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="general-group">
+                    General
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="general-group" class="group-content">
+                    <label for="user-name" class="block mb-2 text-sm font-medium">Your Name</label>
+                    <input id="user-name" type="text" placeholder="Enter your name for a greeting" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="greeting-toggle" class="text-sm font-medium">Show Greeting</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="greeting-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="quote-toggle" class="text-sm font-medium">Show Quote of the Day</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="quote-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="time-group">
+                    Time
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="time-group" class="group-content">
+                    <label for="time-mode-select" class="block mb-2 text-sm font-medium">Time Display Mode</label>
+                    <select id="time-mode-select" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <option value="clock">Clock</option>
+                        <option value="countdown">Countdown</option>
+                        <option value="stopwatch">Stopwatch</option>
+                    </select>
+                    <label for="time-font-select" class="block mt-4 mb-2 text-sm font-medium">Time Font</label>
+                    <select id="time-font-select" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <option value="font-inter">Inter</option>
+                        <option value="font-lato">Lato</option>
+                        <option value="font-roboto">Roboto</option>
+                        <option value="font-montserrat">Montserrat</option>
+                    </select>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="clock-toggle" class="text-sm font-medium">24-Hour Clock</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="clock-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4" id="seconds-toggle-container">
+                        <label for="seconds-toggle" class="text-sm font-medium">Show Seconds</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="seconds-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4" id="countdown-duration-container">
+                        <label for="countdown-duration" class="text-sm font-medium">Countdown from (seconds)</label>
+                        <input id="countdown-duration" type="number" min="1" max="60" class="w-20 p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="60">
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="timezone-toggle" class="text-sm font-medium">Show Time Zone</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="timezone-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Layouts -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="layout-group">
+                    Layouts
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="layout-group" class="group-content">
+                    <label class="block mb-2 text-sm font-medium">Choose a Preset Layout</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors" data-layout="default">Centered</button>
+                        <button class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors" data-layout="compact">Compact</button>
+                        <button class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors" data-layout="minimal">Minimal</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="appearance-group">
+                    Appearance
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="appearance-group" class="group-content hidden">
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="eye-toggle" class="text-sm font-medium">Show Iris Eye</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="eye-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="shadow-toggle" class="text-sm font-medium">Show Text Shadow</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="shadow-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="glass-effect-toggle" class="text-sm font-medium">Glass Effect Container</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="glass-effect-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-6 mb-3 border-b border-gray-700 pb-2">Backgrounds</h3>
+                    <div id="background-previews" class="flex flex-wrap gap-4 items-center mb-4"></div>
+                    <label for="background-url" class="block mt-4 mb-2 text-sm font-medium">Or paste a custom URL</label>
+                    <input id="background-url" type="url" placeholder="Paste image URL here" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <h3 class="text-lg font-semibold mt-6 mb-3 border-b border-gray-700 pb-2">Themes</h3>
+                    <div id="theme-buttons" class="flex justify-between items-center mt-4">
+                        <button class="px-4 py-2 rounded-full border-2 border-transparent hover:border-blue-400 bg-cyan-500/30 text-xs" data-theme="iris">Iris</button>
+                        <button class="px-4 py-2 rounded-full border-2 border-transparent hover:border-blue-400 bg-orange-500/30 text-xs" data-theme="sunset">Sunset</button>
+                        <button class="px-4 py-2 rounded-full border-2 border-transparent hover:border-blue-400 bg-green-500/30 text-xs" data-theme="forest">Forest</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="weather-group">
+                    Weather
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="weather-group" class="group-content hidden">
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="weather-toggle" class="text-sm font-medium">Show Weather</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="weather-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="weather-unit-toggle" class="text-sm font-medium">Use Fahrenheit</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="weather-unit-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bookmarks Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="bookmarks-group">
+                    Bookmarks
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="bookmarks-group" class="group-content hidden">
+                    <label for="bookmark-size-select" class="block mb-2 text-sm font-medium">Bookmark Size</label>
+                    <select id="bookmark-size-select" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                    <h3 class="text-lg font-semibold mt-6 mb-3 border-b border-gray-700 pb-2">Add Bookmark</h3>
+                    <form id="add-bookmark-form" class="flex flex-col gap-3">
+                        <input id="bookmark-name" type="text" placeholder="Name" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <input id="bookmark-url" type="url" placeholder="URL" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <button type="submit" class="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 self-end transition-colors">Add Bookmark</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- To-Do List Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="todo-group">
+                    To-Do List
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="todo-group" class="group-content hidden">
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="todo-toggle" class="text-sm font-medium">Show To-Do List</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="todo-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <label for="todo-title-input" class="block mt-4 mb-2 text-sm font-medium">To-Do List Title</label>
+                    <input id="todo-title-input" type="text" placeholder="e.g. Daily Tasks" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Pomodoro Settings -->
+            <div>
+                <button class="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 w-full flex justify-between items-center group-toggle" data-target="pomodoro-group">
+                    Pomodoro Timer
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+                <div id="pomodoro-group" class="group-content hidden">
+                    <div class="flex items-center justify-between mt-4">
+                        <label for="pomodoro-toggle" class="text-sm font-medium">Show Pomodoro Timer</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="pomodoro-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="mt-4">
+                        <label for="work-duration" class="block mb-2 text-sm font-medium">Work Session (minutes)</label>
+                        <input id="work-duration" type="number" min="1" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="mt-4">
+                        <label for="break-duration" class="block mb-2 text-sm font-medium">Break Session (minutes)</label>
+                        <input id="break-duration" type="number" min="1" class="w-full p-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <button id="save-settings-btn" class="w-full py-2 bg-green-600 rounded-lg hover:bg-green-700 font-bold transition-colors mt-4">Save and Close</button>
+        </div>
+    </div>
+    
+    <!-- Custom Modal for Messages -->
+    <div id="message-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm flex flex-col gap-4">
+            <h3 class="text-xl font-bold" id="message-title"></h3>
+            <p id="message-text"></p>
+            <button class="px-4 py-2 bg-blue-500 rounded hover:bg-blue-600 self-end" id="message-ok-btn">OK</button>
+        </div>
+    </div>
+
+    <!-- Snackbar for notifications -->
+    <div id="snackbar"></div>
+
+    <script>
+        const loadState = () => {
+            try {
+                const storedState = JSON.parse(localStorage.getItem('userSettings')) || {};
+                return {
+                    userName: storedState.userName || '',
+                    backgroundUrl: storedState.backgroundUrl || '',
+                    searchEngine: storedState.searchEngine || 'google',
+                    bookmarks: storedState.bookmarks || [],
+                    is24HClock: storedState.is24HClock || false,
+                    showSeconds: storedState.showSeconds === undefined ? false : storedState.showSeconds,
+                    selectedBackgroundId: storedState.selectedBackgroundId || 'dark-iris',
+                    timeFont: storedState.timeFont || 'font-inter',
+                    showWeather: storedState.showWeather === undefined ? true : storedState.showWeather,
+                    showEye: storedState.showEye === undefined ? true : storedState.showEye,
+                    showShadow: storedState.showShadow === undefined ? true : storedState.showShadow,
+                    bookmarkSize: storedState.bookmarkSize || 'medium',
+                    showTodos: storedState.showTodos === undefined ? false : storedState.showTodos,
+                    showQuote: storedState.showQuote === undefined ? true : storedState.showQuote,
+                    showGreeting: storedState.showGreeting === undefined ? true : storedState.showGreeting,
+                    todos: storedState.todos || [],
+                    weatherUnit: storedState.weatherUnit || 'C',
+                    showTimeZone: storedState.showTimeZone === undefined ? true : storedState.showTimeZone,
+                    todoTitle: storedState.todoTitle || 'To-Do List',
+                    showGlassEffect: storedState.showGlassEffect === undefined ? false : storedState.showGlassEffect,
+                    timeDisplayMode: storedState.timeDisplayMode || 'clock',
+                    countdownDuration: storedState.countdownDuration || 60,
+                    pomodoro: storedState.pomodoro || {
+                        workDuration: 25,
+                        breakDuration: 5,
+                        showTimer: false,
+                        timerRunning: false,
+                        timeLeft: 25 * 60,
+                        timerMode: 'work',
+                        interval: null
+                    },
+                    theme: storedState.theme || 'iris',
+                    layout: storedState.layout || 'default'
+                };
+            } catch (e) {
+                console.error("Failed to load state from localStorage:", e);
+                return {
+                    userName: '', backgroundUrl: '', searchEngine: 'google', bookmarks: [],
+                    is24HClock: false, showSeconds: false, selectedBackgroundId: 'dark-iris', timeFont: 'font-inter', showWeather: true, showEye: true, showShadow: true, bookmarkSize: 'medium', showTodos: false, showQuote: true, showGreeting: true, todos: [], weatherUnit: 'C', showTimeZone: true, todoTitle: 'To-Do List', showGlassEffect: false, timeDisplayMode: 'clock', countdownDuration: 60, pomodoro: { workDuration: 25, breakDuration: 5, showTimer: false, timerRunning: false, timeLeft: 25 * 60, timerMode: 'work', interval: null }, theme: 'iris', layout: 'default'
+                };
+            }
+        };
+
+        let state = loadState();
+        let stopwatchInterval;
+        let stopwatchStartTime;
+        let stopwatchElapsed = 0;
+
+        const saveState = () => {
+            const stateToSave = { ...state };
+            stateToSave.pomodoro.interval = null; // Don't save interval ID
+            localStorage.setItem('userSettings', JSON.stringify(stateToSave));
+        };
+        
+        const searchEngines = [
+            { name: 'google', url: 'https://www.google.com/search', icon: 'fa-brands fa-google text-blue-400', placeholder: 'Search Google...' },
+            { name: 'duckduckgo', url: 'https://duckduckgo.com/', icon: 'fa-solid fa-magnifying-glass text-yellow-400', placeholder: 'Search DuckDuckGo...' },
+            { name: 'bing', url: 'https://www.bing.com/search', icon: 'fa-brands fa-microsoft text-blue-500', placeholder: 'Search Bing...' },
+            { name: 'yahoo', url: 'https://search.yahoo.com/search', icon: 'fa-brands fa-yahoo text-purple-400', placeholder: 'Search Yahoo!' }
+        ];
+
+        const backgroundTemplates = [
+            { id: 'dark-iris', name: 'Dark Iris', style: 'radial-gradient(circle at 10% 20%, #1f2937 0%, #111827 100%)' },
+            { id: 'blue-gradient', name: 'Blue Gradient', style: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' },
+            { id: 'subtle-aurora', name: 'Subtle Aurora', style: 'radial-gradient(circle at 50% 10%, #4f46e5 0%, rgba(0,0,0,0) 60%), radial-gradient(circle at 90% 90%, #6366f1 0%, rgba(0,0,0,0) 60%), radial-gradient(circle at 10% 80%, #a5b4fc 0%, rgba(0,0,0,0) 60%)' },
+            { id: 'sky-and-sea', name: 'Sky & Sea', style: 'linear-gradient(to top, #3b82f6, #0ea5e9)' },
+            { id: 'warm-sunset', name: 'Warm Sunset', style: 'linear-gradient(to right, #fbbf24, #f97316)' },
+            { id: 'iridescent-blue-dark', name: 'Iris Iridescent', style: 'radial-gradient(ellipse at bottom, #102641, #000000), linear-gradient(to bottom, #050510, #132747)' },
+            { id: 'iris-geometric', name: 'Iris Geometric', style: 'linear-gradient(to right, #0F2027, #203A43, #2C5364)' },
+            { id: 'user-url', name: 'Custom URL', style: 'none', isCustom: true }
+        ];
+
+        const quotes = [
+            "The only way to do great work is to love what you do. - Steve Jobs",
+            "In a world where you can be anything, be kind. - Anonymous",
+            "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+            "The best way to predict the future is to create it. - Abraham Lincoln",
+            "It's not what happens to you, but how you react to it that matters. - Epictetus",
+            "Your time is limited, don't waste it living someone else's life. - Steve Jobs",
+            "The only impossible journey is the one you never begin. - Tony Robbins",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+            "The greatest glory in living lies not in never falling, but in rising every time we fall. - Nelson Mandela",
+            "The way to get started is to quit talking and begin doing. - Walt Disney"
+        ];
+        
+        const motivationalMessages = {
+            morning: "Make it a great day!",
+            afternoon: "Stay focused!",
+            evening: "You got this!",
+        };
+        
+        const bookmarkSizeClasses = {
+            'small': { icon: 'w-6 h-6', gridCols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8' },
+            'medium': { icon: 'w-8 h-8', gridCols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6' },
+            'large': { icon: 'w-10 h-10', gridCols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4' }
+        };
+        
+        const updatePomodoroUI = () => {
+            const pomodoroContainer = document.getElementById('pomodoro-container');
+            const pomodoroTitleEl = document.getElementById('pomodoro-title');
+            const pomodoroStatusEl = document.getElementById('pomodoro-status');
+            const pomodoroMinutesEl = document.getElementById('pomodoro-minutes');
+            const pomodoroSecondsEl = document.getElementById('pomodoro-seconds');
+
+            if (state.pomodoro.showTimer) {
+                pomodoroContainer.classList.remove('hidden');
+            } else {
+                pomodoroContainer.classList.add('hidden');
+            }
+
+            pomodoroTitleEl.textContent = state.pomodoro.timerMode === 'work' ? 'Work Session' : 'Break Session';
+            pomodoroStatusEl.textContent = state.pomodoro.timerRunning ? 'Running' : 'Paused';
+            
+            const minutes = Math.floor(state.pomodoro.timeLeft / 60);
+            const seconds = state.pomodoro.timeLeft % 60;
+            pomodoroMinutesEl.textContent = minutes.toString().padStart(2, '0');
+            pomodoroSecondsEl.textContent = seconds.toString().padStart(2, '0');
+        };
+
+        const startPomodoro = () => {
+            if (state.pomodoro.timerRunning) return;
+            state.pomodoro.timerRunning = true;
+            state.pomodoro.interval = setInterval(() => {
+                if (state.pomodoro.timeLeft > 0) {
+                    state.pomodoro.timeLeft--;
+                    updatePomodoroUI();
+                } else {
+                    clearInterval(state.pomodoro.interval);
+                    state.pomodoro.timerRunning = false;
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    
+                    if (state.pomodoro.timerMode === 'work') {
+                        state.pomodoro.timerMode = 'break';
+                        state.pomodoro.timeLeft = state.pomodoro.breakDuration * 60;
+                        showSnackbar('Work session complete! Time for a break.');
+                    } else {
+                        state.pomodoro.timerMode = 'work';
+                        state.pomodoro.timeLeft = state.pomodoro.workDuration * 60;
+                        showSnackbar('Break complete! Time to get back to work.');
+                    }
+                    saveState();
+                    updatePomodoroUI();
+                }
+            }, 1000);
+            saveState();
+            updatePomodoroUI();
+        };
+
+        const pausePomodoro = () => {
+            clearInterval(state.pomodoro.interval);
+            state.pomodoro.timerRunning = false;
+            saveState();
+            updatePomodoroUI();
+        };
+
+        const resetPomodoro = () => {
+            clearInterval(state.pomodoro.interval);
+            state.pomodoro.timerRunning = false;
+            state.pomodoro.timerMode = 'work';
+            state.pomodoro.timeLeft = state.pomodoro.workDuration * 60;
+            saveState();
+            updatePomodoroUI();
+        };
+        
+        const updateClockDisplay = () => {
+            const now = new Date();
+            const timeEl = document.getElementById('time');
+            const options = { 
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: !state.is24HClock,
+            };
+            if (state.showSeconds) {
+                options.second = '2-digit';
+            }
+            timeEl.textContent = now.toLocaleTimeString([], options);
+        };
+        
+        const updateCountdownDisplay = () => {
+            const now = new Date();
+            const timeEl = document.getElementById('time');
+            const secondsLeft = state.countdownDuration - now.getSeconds();
+            timeEl.textContent = `${secondsLeft}`;
+            timeEl.classList.add('countdown-fade');
+            setTimeout(() => timeEl.classList.remove('countdown-fade'), 500);
+        };
+        
+        const updateStopwatchDisplay = () => {
+            const timeEl = document.getElementById('time');
+            if (!stopwatchStartTime) return;
+            stopwatchElapsed = Date.now() - stopwatchStartTime;
+            const totalSeconds = Math.floor(stopwatchElapsed / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = Math.floor((stopwatchElapsed % 1000) / 10);
+            
+            const formatTime = (value) => value.toString().padStart(2, '0');
+            timeEl.textContent = `${formatTime(minutes)}:${formatTime(seconds)}.${formatTime(milliseconds)}`;
+        };
+
+        const updateTime = () => {
+            const timezoneEl = document.getElementById('timezone');
+            if (state.timeDisplayMode === 'clock') {
+                updateClockDisplay();
+            } else if (state.timeDisplayMode === 'countdown') {
+                updateCountdownDisplay();
+            }
+
+            if (state.showTimeZone) {
+                timezoneEl.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                timezoneEl.classList.remove('hidden');
+            } else {
+                timezoneEl.classList.add('hidden');
+            }
+        };
+
+        const updateGreeting = () => {
+            const greetingEl = document.getElementById('greeting');
+            const motivationalMessageEl = document.getElementById('motivational-message');
+            const hour = new Date().getHours();
+            let greetingText = 'Good evening';
+            let message = motivationalMessages.evening;
+            if (hour < 12) {
+                greetingText = 'Good morning';
+                message = motivationalMessages.morning;
+            } else if (hour < 18) {
+                greetingText = 'Good afternoon';
+                message = motivationalMessages.afternoon;
+            }
+            greetingEl.textContent = `${greetingText}${state.userName ? ', ' + state.userName : ''}.`;
+            motivationalMessageEl.textContent = message;
+            
+            if (state.showGreeting) {
+                greetingEl.classList.remove('hidden');
+                motivationalMessageEl.classList.remove('hidden');
+            } else {
+                greetingEl.classList.add('hidden');
+                motivationalMessageEl.classList.add('hidden');
+            }
+        };
+        
+        const getWeatherIcon = (code) => {
+            const icons = {
+                0: 'fa-sun', 1: 'fa-sun', 2: 'fa-cloud-sun', 3: 'fa-cloud',
+                45: 'fa-smog', 48: 'fa-smog',
+                51: 'fa-cloud-rain', 53: 'fa-cloud-rain', 55: 'fa-cloud-showers-heavy',
+                61: 'fa-cloud-rain', 63: 'fa-cloud-rain', 65: 'fa-cloud-showers-heavy',
+                71: 'fa-snowflake', 73: 'fa-snowflake', 75: 'fa-snowflake',
+                80: 'fa-cloud-showers-heavy', 81: 'fa-cloud-showers-heavy', 82: 'fa-cloud-showers-heavy',
+                95: 'fa-bolt', 96: 'fa-bolt', 99: 'fa-bolt'
+            };
+            return icons[code] || 'fa-question-circle';
+        };
+
+        const fetchWeather = async () => {
+            const weatherTextEl = document.getElementById('weather-text');
+            const weatherUnitEl = document.getElementById('weather-unit');
+            const cachedWeather = sessionStorage.getItem('weatherData');
+            const cachedTimestamp = sessionStorage.getItem('weatherTimestamp');
+            const now = Date.now();
+            
+            if (cachedWeather && cachedTimestamp && (now - cachedTimestamp < 1800000)) { // 30 minutes
+                const data = JSON.parse(cachedWeather);
+                renderWeatherData(data);
+                return;
+            }
+
+            weatherTextEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            weatherUnitEl.textContent = '';
+            
+            if (!navigator.geolocation) {
+                weatherTextEl.innerHTML = 'Geolocation not supported';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
+                const cityApiUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`;
+                
+                try {
+                    const [weatherResponse, cityResponse] = await Promise.all([
+                        fetch(apiUrl),
+                        fetch(cityApiUrl)
+                    ]);
+                    const weatherData = await weatherResponse.json();
+                    const cityData = await cityResponse.json();
+                    
+                    const data = {
+                        temperature: weatherData.current_weather.temperature,
+                        weathercode: weatherData.current_weather.weathercode,
+                        city: cityData.address?.city || cityData.address?.town || cityData.address?.county || ''
+                    };
+                    
+                    sessionStorage.setItem('weatherData', JSON.stringify(data));
+                    sessionStorage.setItem('weatherTimestamp', now);
+                    renderWeatherData(data);
+
+                } catch (error) {
+                    weatherTextEl.innerHTML = 'Tap to allow location';
+                    console.error("Failed to fetch weather:", error);
+                }
+            }, () => {
+                weatherTextEl.innerHTML = 'Tap to allow location';
+            });
+        };
+        
+        const renderWeatherData = (data) => {
+            const weatherTextEl = document.getElementById('weather-text');
+            const weatherUnitEl = document.getElementById('weather-unit');
+            let temperature = data.temperature;
+            let unit = '°C';
+            if (state.weatherUnit === 'F') {
+                temperature = (temperature * 9/5) + 32;
+                unit = '°F';
+            }
+            const iconClass = getWeatherIcon(data.weathercode);
+            weatherTextEl.innerHTML = `<i class="fas ${iconClass}"></i> ${Math.round(temperature)}${unit}`;
+            weatherUnitEl.textContent = data.city;
+        };
+
+        const renderBookmarks = () => {
+            const bookmarksContainer = document.getElementById('bookmarks-container');
+            
+            const sizeClasses = bookmarkSizeClasses[state.bookmarkSize];
+            bookmarksContainer.className = `grid gap-4 w-full max-w-3xl z-10 ${sizeClasses.gridCols}`;
+            bookmarksContainer.innerHTML = '';
+
+            state.bookmarks.forEach((bookmark, index) => {
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${bookmark.url}&sz=64`;
+                const el = document.createElement('a');
+                el.href = bookmark.url;
+                el.target = '_blank';
+                el.rel = 'noopener noreferrer';
+                el.className = `bookmark-item relative bg-gray-800/50 hover:bg-gray-700/70 p-4 rounded-lg flex flex-col items-center justify-center transition-all duration-200 aspect-square group add-animation`;
+                el.innerHTML = `
+                    <img src="${faviconUrl}" class="${sizeClasses.icon} mb-2 rounded-full shadow-lg" 
+                        onerror="this.src='https://placehold.co/64x64/2d3748/ffffff?text=${bookmark.name.charAt(0)}'">
+                    <span class="text-xs font-medium text-center w-full mt-2 truncate">${bookmark.name}</span>
+                    <div class="bookmark-remove-btn" data-index="${index}"><i class="fas fa-times"></i></div>
+                `;
+                bookmarksContainer.appendChild(el);
+            });
+        };
+
+        const renderTodos = () => {
+            const todoContainer = document.getElementById('todo-container');
+            const todoTitleEl = document.getElementById('todo-title');
+            todoTitleEl.textContent = state.todoTitle;
+
+            if (state.showTodos) {
+                todoContainer.classList.remove('hidden');
+            } else {
+                todoContainer.classList.add('hidden');
+            }
+            const todoListEl = document.getElementById('todo-list');
+            todoListEl.innerHTML = '';
+            state.todos.forEach((todo, index) => {
+                const li = document.createElement('li');
+                li.className = `flex items-center gap-2 transition-all duration-300 ${todo.completed ? 'opacity-50 line-through italic' : ''}`;
+                li.innerHTML = `
+                    <input type="checkbox" data-index="${index}" ${todo.completed ? 'checked' : ''} class="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 rounded border-gray-600 cursor-pointer">
+                    <span class="flex-grow">${todo.text}</span>
+                    <button class="text-gray-400 hover:text-red-500 transition-colors" data-action="delete" data-index="${index}"><i class="fas fa-trash-alt"></i></button>
+                `;
+                todoListEl.appendChild(li);
+            });
+        };
+
+        const addTodo = (text) => {
+            state.todos.push({ text, completed: false });
+            saveState();
+            renderTodos();
+            showSnackbar('Task added!');
+        };
+
+        const toggleTodo = (index) => {
+            state.todos[index].completed = !state.todos[index].completed;
+            saveState();
+            renderTodos();
+            showSnackbar(`Task marked as ${state.todos[index].completed ? 'completed' : 'incomplete'}.`);
+        };
+
+        const deleteTodo = (index) => {
+            state.todos.splice(index, 1);
+            saveState();
+            renderTodos();
+            showSnackbar('Task removed!');
+        };
+        
+        const displayQuote = () => {
+            const quoteContainer = document.getElementById('quote-container');
+            if (state.showQuote) {
+                quoteContainer.classList.remove('hidden');
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                quoteContainer.textContent = `"${randomQuote}"`;
+            } else {
+                quoteContainer.classList.add('hidden');
+            }
+        };
+
+        const updateSearchEngineUI = () => {
+            const searchForm = document.getElementById('search-form');
+            const searchEngineIcon = document.getElementById('search-engine-icon');
+            const searchInput = searchForm.querySelector('input');
+            const currentEngine = searchEngines.find(e => e.name === state.searchEngine);
+            
+            if (currentEngine) {
+                searchForm.action = currentEngine.url;
+                searchInput.name = 'q';
+                searchEngineIcon.className = `${currentEngine.icon} text-xl`;
+                searchInput.placeholder = currentEngine.placeholder;
+            } else {
+                searchForm.action = searchEngines[0].url;
+                searchInput.name = 'q';
+                searchEngineIcon.className = `${searchEngines[0].icon} text-xl`;
+                searchInput.placeholder = searchEngines[0].placeholder;
+            }
+        };
+
+        const updateBackground = () => {
+            const bgTemplate = backgroundTemplates.find(t => t.id === state.selectedBackgroundId);
+            if (bgTemplate && !bgTemplate.isCustom) {
+                document.body.style.backgroundImage = bgTemplate.style;
+            } else if (state.backgroundUrl) {
+                document.body.style.backgroundImage = `url('${state.backgroundUrl}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+        };
+
+        const renderBackgroundPreviews = () => {
+            const container = document.getElementById('background-previews');
+            container.innerHTML = '';
+            backgroundTemplates.forEach(template => {
+                const div = document.createElement('div');
+                div.className = `bg-preview ${state.selectedBackgroundId === template.id ? 'selected' : ''}`;
+                div.title = template.name;
+                div.dataset.templateId = template.id;
+                div.style.background = template.style;
+                if (template.isCustom) {
+                    div.innerHTML = `<span class="text-gray-400 text-xs text-center">${template.name}</span>`;
+                    div.style.background = 'repeating-linear-gradient(45deg, #4b5563, #4b5563 10px, #374151 10px, #374151 20px)';
+                }
+                container.appendChild(div);
+            });
+        };
+
+        const updateWeatherUI = () => {
+            const weatherContainer = document.getElementById('weather-container');
+            if (state.showWeather) {
+                weatherContainer.classList.remove('hidden');
+                fetchWeather();
+            } else {
+                weatherContainer.classList.add('hidden');
+            }
+        };
+
+        const updateEyeUI = () => {
+            const eyeContainer = document.getElementById('eye-container');
+            if (state.showEye) {
+                eyeContainer.classList.remove('hidden');
+            } else {
+                eyeContainer.classList.add('hidden');
+            }
+        };
+        
+        const updateShadowUI = () => {
+            const elements = [
+                document.getElementById('greeting'),
+                document.getElementById('time'),
+                document.getElementById('weather-container'),
+                document.getElementById('motivational-message')
+            ];
+            elements.forEach(el => {
+                if (state.showShadow) {
+                    el.classList.add('text-shadow-lg');
+                } else {
+                    el.classList.remove('text-shadow-lg');
+                }
+            });
+        };
+
+
+        const updateGlassEffectUI = () => {
+            const mainContentWrapper = document.getElementById('main-content-wrapper');
+            if (state.showGlassEffect) {
+                mainContentWrapper.classList.add('main-content-glass');
+                mainContentWrapper.classList.remove('p-8');
+            } else {
+                mainContentWrapper.classList.remove('main-content-glass');
+            }
+        };
+        
+        const updateThemeUI = () => {
+            document.body.className = `bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4 transition-all duration-500 theme-${state.theme}`;
+            updateSearchEngineUI();
+            updateEyeUI();
+            updatePomodoroUI();
+        };
+
+        const updateLayoutUI = () => {
+            const body = document.body;
+            body.classList.remove('compact-layout', 'minimal-layout');
+
+            const elementsToManage = [
+                document.getElementById('greeting'),
+                document.getElementById('motivational-message'),
+                document.getElementById('time'),
+                document.getElementById('timezone'),
+                document.getElementById('bookmarks-container')
+            ];
+
+            if (state.layout === 'compact') {
+                body.classList.add('compact-layout');
+                document.getElementById('search-form').classList.remove('w-full', 'max-w-lg');
+                document.getElementById('search-form').classList.add('w-1/2', 'max-w-sm', 'mx-auto');
+                document.getElementById('greeting').classList.add('top-left');
+                document.getElementById('bookmarks-container').classList.add('top-right');
+                
+            } else if (state.layout === 'minimal') {
+                body.classList.add('minimal-layout');
+            } else {
+                 document.getElementById('search-form').classList.add('w-full', 'max-w-lg');
+                 document.getElementById('search-form').classList.remove('w-1/2', 'max-w-sm', 'mx-auto');
+                 document.getElementById('greeting').classList.remove('top-left');
+                 document.getElementById('bookmarks-container').classList.remove('top-right');
+            }
+        };
+
+        const updateUI = () => {
+            updateTime();
+            updateGreeting();
+            renderBookmarks();
+            updateSearchEngineUI();
+            updateBackground();
+            renderBackgroundPreviews();
+            updateWeatherUI();
+            updateEyeUI();
+            updateShadowUI();
+            renderTodos();
+            displayQuote();
+            updateGlassEffectUI();
+            updatePomodoroUI();
+            updateLayoutUI();
+            
+            const timeEl = document.getElementById('time');
+            const greetingEl = document.getElementById('greeting');
+            ['font-inter', 'font-lato', 'font-roboto', 'font-montserrat'].forEach(c => {
+                timeEl.classList.remove(c);
+                greetingEl.classList.remove(c);
+            });
+            timeEl.classList.add(state.timeFont);
+            greetingEl.classList.add(state.timeFont);
+            
+            // Manage time-based intervals based on selected mode
+            if (state.timeDisplayMode === 'stopwatch') {
+                clearInterval(window.mainTimeInterval);
+                if (stopwatchInterval) clearInterval(stopwatchInterval);
+                stopwatchInterval = setInterval(updateStopwatchDisplay, 10);
+            } else {
+                clearInterval(stopwatchInterval);
+                if (window.mainTimeInterval) clearInterval(window.mainTimeInterval);
+                window.mainTimeInterval = setInterval(updateTime, 1000);
+            }
+        };
+
+        const deleteBookmark = (index) => {
+            const bookmarkEl = document.querySelector(`.bookmark-remove-btn[data-index="${index}"]`).closest('.bookmark-item');
+            bookmarkEl.classList.add('remove-animation');
+            
+            setTimeout(() => {
+                state.bookmarks.splice(index, 1);
+                saveState();
+                updateUI();
+                showSnackbar('Bookmark removed!');
+            }, 300);
+        };
+
+        const addBookmark = (name, url) => {
+            const isDuplicate = state.bookmarks.some(bookmark => bookmark.url === url);
+            if (isDuplicate) {
+                showSnackbar('This URL is already bookmarked.');
+                return;
+            }
+            state.bookmarks.push({ name, url });
+            saveState();
+            updateUI();
+            showSnackbar('Bookmark added!');
+        };
+
+        const showMessage = (title, text) => {
+            document.getElementById('message-title').textContent = title;
+            document.getElementById('message-text').textContent = text;
+            document.getElementById('message-modal').classList.add('is-open');
+        };
+
+        const showSnackbar = (message) => {
+            const snackbar = document.getElementById('snackbar');
+            snackbar.textContent = message;
+            snackbar.classList.add('show');
+            setTimeout(() => {
+                snackbar.classList.remove('show');
+            }, 3000);
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchForm = document.getElementById('search-form');
+            const searchEngineToggle = document.getElementById('search-engine-toggle');
+            const bookmarksContainer = document.getElementById('bookmarks-container');
+            const settingsModal = document.getElementById('settings-modal');
+            const modalContent = document.getElementById('modal-content');
+            const settingsBtn = document.getElementById('settings-btn');
+            const addBookmarkForm = document.getElementById('add-bookmark-form');
+            const clockToggle = document.getElementById('clock-toggle');
+            const secondsToggle = document.getElementById('seconds-toggle');
+            const weatherToggle = document.getElementById('weather-toggle');
+            const eyeToggle = document.getElementById('eye-toggle');
+            const shadowToggle = document.getElementById('shadow-toggle');
+            const greetingToggle = document.getElementById('greeting-toggle');
+            const todoToggle = document.getElementById('todo-toggle');
+            const quoteToggle = document.getElementById('quote-toggle');
+            const timeFontSelect = document.getElementById('time-font-select');
+            const bookmarkSizeSelect = document.getElementById('bookmark-size-select');
+            const backgroundPreviewsContainer = document.getElementById('background-previews');
+            const backgroundUrlInput = document.getElementById('background-url');
+            const weatherTextEl = document.getElementById('weather-text');
+            const addTodoForm = document.getElementById('add-todo-form');
+            const newTodoInput = document.getElementById('new-todo-input');
+            const todoListEl = document.getElementById('todo-list');
+            const weatherUnitToggle = document.getElementById('weather-unit-toggle');
+            const todoTitleInput = document.getElementById('todo-title-input');
+            const timezoneToggle = document.getElementById('timezone-toggle');
+            const groupToggles = document.querySelectorAll('.group-toggle');
+            const glassEffectToggle = document.getElementById('glass-effect-toggle');
+            const timeModeSelect = document.getElementById('time-mode-select');
+            const countdownDurationInput = document.getElementById('countdown-duration');
+            const secondsToggleContainer = document.getElementById('seconds-toggle-container');
+            const countdownDurationContainer = document.getElementById('countdown-duration-container');
+            const timeEl = document.getElementById('time');
+            const pomodoroToggle = document.getElementById('pomodoro-toggle');
+            const workDurationInput = document.getElementById('work-duration');
+            const breakDurationInput = document.getElementById('break-duration');
+            const pomodoroStartBtn = document.getElementById('pomodoro-start-btn');
+            const pomodoroPauseBtn = document.getElementById('pomodoro-pause-btn');
+            const pomodoroResetBtn = document.getElementById('pomodoro-reset-btn');
+            const themeButtons = document.getElementById('theme-buttons');
+            const layoutButtons = document.querySelectorAll('[data-layout]');
+
+            updateUI();
+            updateThemeUI();
+            document.getElementById('main-content-wrapper').style.opacity = 1;
+
+            groupToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    const targetId = toggle.dataset.target;
+                    const targetGroup = document.getElementById(targetId);
+                    const chevron = toggle.querySelector('.chevron');
+                    targetGroup.classList.toggle('hidden');
+                    chevron.classList.toggle('rotated');
+                });
+            });
+            
+            searchEngineToggle.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                const icon = searchEngineToggle.querySelector('i');
+                icon.classList.add('search-engine-toggle-animation');
+                
+                setTimeout(() => {
+                    const currentIndex = searchEngines.findIndex(e => e.name === state.searchEngine);
+                    const nextIndex = (currentIndex + 1) % searchEngines.length;
+                    state.searchEngine = searchEngines[nextIndex].name;
+                    saveState();
+                    updateSearchEngineUI();
+                    icon.classList.remove('search-engine-toggle-animation');
+                    icon.style.animation = 'search-toggle-in 0.2s ease-in-out forwards';
+                    setTimeout(() => icon.style.animation = '', 200);
+                }, 200);
+            });
+
+            settingsBtn.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(50);
+                settingsBtn.querySelector('i').classList.add('animate-spin-slow');
+                
+                setTimeout(() => {
+                    document.getElementById('user-name').value = state.userName;
+                    backgroundUrlInput.value = state.backgroundUrl;
+                    clockToggle.checked = state.is24HClock;
+                    secondsToggle.checked = state.showSeconds;
+                    weatherToggle.checked = state.showWeather;
+                    eyeToggle.checked = state.showEye;
+                    shadowToggle.checked = state.showShadow;
+                    greetingToggle.checked = state.showGreeting;
+                    todoToggle.checked = state.showTodos;
+                    quoteToggle.checked = state.showQuote;
+                    weatherUnitToggle.checked = state.weatherUnit === 'F';
+                    timezoneToggle.checked = state.showTimeZone;
+                    todoTitleInput.value = state.todoTitle;
+                    timeFontSelect.value = state.timeFont;
+                    bookmarkSizeSelect.value = state.bookmarkSize;
+                    glassEffectToggle.checked = state.showGlassEffect;
+                    timeModeSelect.value = state.timeDisplayMode;
+                    countdownDurationInput.value = state.countdownDuration;
+                    pomodoroToggle.checked = state.pomodoro.showTimer;
+                    workDurationInput.value = state.pomodoro.workDuration;
+                    breakDurationInput.value = state.pomodoro.breakDuration;
+
+                    if (state.timeDisplayMode === 'clock') {
+                        secondsToggleContainer.classList.remove('hidden');
+                        countdownDurationContainer.classList.add('hidden');
+                    } else if (state.timeDisplayMode === 'countdown') {
+                        secondsToggleContainer.classList.add('hidden');
+                        countdownDurationContainer.classList.remove('hidden');
+                    } else {
+                        secondsToggleContainer.classList.add('hidden');
+                        countdownDurationContainer.classList.add('hidden');
+                    }
+
+                    settingsModal.classList.add('is-open');
+                    modalContent.classList.remove('opacity-0', 'scale-95');
+                    modalContent.classList.add('opacity-100', 'scale-100');
+                    renderBackgroundPreviews();
+                    settingsBtn.querySelector('i').classList.remove('animate-spin-slow');
+                }, 300);
+            });
+            
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    modalContent.classList.add('opacity-0', 'scale-95');
+                    modalContent.classList.remove('opacity-100', 'scale-100');
+                    setTimeout(() => settingsModal.classList.remove('is-open'), 300);
+                }
+            });
+
+            document.querySelectorAll('.modal-close-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modalContent.classList.add('opacity-0', 'scale-95');
+                    modalContent.classList.remove('opacity-100', 'scale-100');
+                    setTimeout(() => settingsModal.classList.remove('is-open'), 300);
+                });
+            });
+
+            document.getElementById('save-settings-btn').addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(50);
+                state.userName = document.getElementById('user-name').value.trim();
+                state.backgroundUrl = backgroundUrlInput.value.trim();
+                state.is24HClock = clockToggle.checked;
+                state.showSeconds = secondsToggle.checked;
+                state.showWeather = weatherToggle.checked;
+                state.showEye = eyeToggle.checked;
+                state.showShadow = shadowToggle.checked;
+                state.showGreeting = greetingToggle.checked;
+                state.showTodos = todoToggle.checked;
+                state.showQuote = quoteToggle.checked;
+                state.weatherUnit = weatherUnitToggle.checked ? 'F' : 'C';
+                state.showTimeZone = timezoneToggle.checked;
+                state.todoTitle = todoTitleInput.value.trim() || 'To-Do List';
+                state.timeFont = timeFontSelect.value;
+                state.bookmarkSize = bookmarkSizeSelect.value;
+                state.showGlassEffect = glassEffectToggle.checked;
+                state.timeDisplayMode = timeModeSelect.value;
+                state.countdownDuration = parseInt(countdownDurationInput.value, 10);
+                state.pomodoro.showTimer = pomodoroToggle.checked;
+                state.pomodoro.workDuration = parseInt(workDurationInput.value, 10);
+                state.pomodoro.breakDuration = parseInt(breakDurationInput.value, 10);
+                
+                if (state.pomodoro.workDuration * 60 !== state.pomodoro.timeLeft && state.pomodoro.timerMode === 'work') {
+                    state.pomodoro.timeLeft = state.pomodoro.workDuration * 60;
+                } else if (state.pomodoro.breakDuration * 60 !== state.pomodoro.timeLeft && state.pomodoro.timerMode === 'break') {
+                    state.pomodoro.timeLeft = state.pomodoro.breakDuration * 60;
+                }
+
+                if (state.backgroundUrl) {
+                    state.selectedBackgroundId = 'user-url';
+                }
+                saveState();
+                updateUI();
+                modalContent.classList.add('opacity-0', 'scale-95');
+                modalContent.classList.remove('opacity-100', 'scale-100');
+                setTimeout(() => settingsModal.classList.remove('is-open'), 300);
+            });
+
+            addBookmarkForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('bookmark-name').value;
+                const url = document.getElementById('bookmark-url').value;
+                addBookmark(name, url);
+                addBookmarkForm.reset();
+            });
+            
+            bookmarksContainer.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.bookmark-remove-btn');
+                if (removeBtn) {
+                    e.preventDefault();
+                    deleteBookmark(parseInt(removeBtn.dataset.index, 10));
+                }
+            });
+
+            backgroundPreviewsContainer.addEventListener('click', (e) => {
+                const selectedPreview = e.target.closest('.bg-preview');
+                if (selectedPreview) {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    state.selectedBackgroundId = selectedPreview.dataset.templateId;
+                    if (state.selectedBackgroundId !== 'user-url') {
+                        backgroundUrlInput.value = '';
+                        state.backgroundUrl = '';
+                    }
+                    saveState();
+                    updateUI();
+                }
+            });
+
+            weatherTextEl.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                if (weatherTextEl.textContent === 'Tap to allow location' || weatherTextEl.textContent === 'Weather unavailable') {
+                    fetchWeather();
+                }
+            });
+
+            document.getElementById('message-ok-btn').addEventListener('click', () => {
+                document.getElementById('message-modal').classList.remove('is-open');
+            });
+
+            addTodoForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const todoText = newTodoInput.value.trim();
+                if (todoText) {
+                    addTodo(todoText);
+                    newTodoInput.value = '';
+                }
+            });
+
+            todoListEl.addEventListener('click', (e) => {
+                const target = e.target;
+                const index = target.dataset.index;
+                if (target.type === 'checkbox') {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    toggleTodo(index);
+                } else if (target.closest('[data-action="delete"]')) {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    deleteTodo(index);
+                }
+            });
+
+            timeEl.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                const modes = ['clock', 'countdown', 'stopwatch'];
+                const currentIndex = modes.indexOf(state.timeDisplayMode);
+                const nextIndex = (currentIndex + 1) % modes.length;
+                state.timeDisplayMode = modes[nextIndex];
+                saveState();
+                updateUI();
+
+                if (state.timeDisplayMode === 'stopwatch') {
+                    stopwatchStartTime = Date.now();
+                } else {
+                    stopwatchElapsed = 0;
+                }
+            });
+            
+            timeModeSelect.addEventListener('change', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                const selectedMode = timeModeSelect.value;
+                if (selectedMode === 'clock') {
+                    secondsToggleContainer.classList.remove('hidden');
+                    countdownDurationContainer.classList.add('hidden');
+                } else if (selectedMode === 'countdown') {
+                    secondsToggleContainer.classList.add('hidden');
+                    countdownDurationContainer.classList.remove('hidden');
+                } else {
+                    secondsToggleContainer.classList.add('hidden');
+                    countdownDurationContainer.classList.add('hidden');
+                }
+            });
+
+            pomodoroStartBtn.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                startPomodoro();
+            });
+
+            pomodoroPauseBtn.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                pausePomodoro();
+            });
+
+            pomodoroResetBtn.addEventListener('click', () => {
+                if (navigator.vibrate) navigator.vibrate(25);
+                resetPomodoro();
+            });
+            
+            themeButtons.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', () => {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    state.theme = button.dataset.theme;
+                    saveState();
+                    updateThemeUI();
+                });
+            });
+
+            layoutButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    state.layout = button.dataset.layout;
+                    saveState();
+                    updateLayoutUI();
+                });
+            });
+
+            clockToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            secondsToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            weatherToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            eyeToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            shadowToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            bookmarkSizeSelect.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            timeFontSelect.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            greetingToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            todoToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            quoteToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            weatherUnitToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            timezoneToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            glassEffectToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            pomodoroToggle.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            workDurationInput.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+            breakDurationInput.addEventListener('change', () => { if (navigator.vibrate) navigator.vibrate(25); });
+        });
+    </script>
+</body>
+</html>
